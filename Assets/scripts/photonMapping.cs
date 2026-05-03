@@ -2,43 +2,19 @@ using UnityEngine;
 
 public class photonMapping : MonoBehaviour
 {
-    //private int once = 0;
     LineRenderer lineRenderer;
 
-       LayerMask layerMask;
-       
+    LayerMask layerMask;
 
-   /*  void Awake()
+   void Awake()
     {
-        layerMask = LayerMask.GetMask("Water");
-    } */
-
-
-
-   /*   void FixedUpdate()
-    {
-
-        RaycastHit hit;
-        // Does the ray intersect any objects excluding the player layer
-        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, Mathf.Infinity))
-
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
-            Debug.Log("Did Hit");
-        }
-        else
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1000, Color.white);
-            Debug.Log("Did not Hit");
-        }
-
-    } */
-
-
+        layerMask = LayerMask.GetMask("Ground");
+    }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        // Create Line
         lineRenderer = gameObject.AddComponent<LineRenderer>();
         // Set the material
         lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
@@ -65,23 +41,32 @@ public class photonMapping : MonoBehaviour
 
     void photonRay()
     {
-        RaycastHit hit;
-        // Does the ray intersect any objects excluding the player layer
-        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, Mathf.Infinity))
-
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
+        // Ray from light to durface
+        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out RaycastHit hit, Mathf.Infinity)){
             Vector3 normal = hit.normal;
-            lineRenderer.enabled = true;
+            // Create a line render from light to water suface
+            /* lineRenderer.enabled = true;
             lineRenderer.SetPosition(0, transform.position);
-            lineRenderer.SetPosition(1, hit.point);
-            lineRenderer.SetPosition(2, normal);
-        }
-         else
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1000, Color.white);
-            Debug.Log("Did not Hit");
-        }
-       
+            lineRenderer.SetPosition(1, hit.point); */
+
+            // Calculate end points and direction for the ray
+            Vector3 endPoint = hit.point + hit.normal * -2f;
+            Vector3 direction = endPoint - hit.point;
+             
+            // Ray from surface to ground
+            if (Physics.Raycast(hit.point, direction, out RaycastHit hit2, Mathf.Infinity, layerMask)){
+                //lineRenderer.SetPosition(2, hit2.point);
+
+                // create sphere
+                GameObject dot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
+                dot.transform.position = hit2.point;
+                dot.transform.localScale = Vector3.one * 0.1f;
+
+                Renderer renderer = dot.GetComponent<Renderer>();
+                renderer.material.color = Color.white;
+
+            }
+        } 
     }
 }
