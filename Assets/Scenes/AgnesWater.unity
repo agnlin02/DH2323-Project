@@ -171,10 +171,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: Boulder
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 372255ab35d1893419b77606c58a89c5, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 372255ab35d1893419b77606c58a89c5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 708255893}
   m_SourcePrefab: {fileID: 100100000, guid: 372255ab35d1893419b77606c58a89c5, type: 3}
 --- !u!1 &370226699
 GameObject:
@@ -556,6 +563,33 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f4cf4e8b65072f84aaedbb0daeb74eb7, type: 3}
+--- !u!1 &708255889 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 372255ab35d1893419b77606c58a89c5, type: 3}
+  m_PrefabInstance: {fileID: 287117966}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &708255893
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 708255889}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -4014093162776582240, guid: 372255ab35d1893419b77606c58a89c5, type: 3}
 --- !u!1 &1759324906 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 2ca5f828212a93b4fa935b1720dab711, type: 3}
@@ -991,6 +1025,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bce9a7d211304a94ca6150ce52bf171b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  eta1: 1.0003
+  eta2: 1.333
 --- !u!114 &7960411367020268653
 MonoBehaviour:
   m_ObjectHideFlags: 0
