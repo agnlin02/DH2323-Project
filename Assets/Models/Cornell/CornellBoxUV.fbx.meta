@@ -1,39 +1,9 @@
 fileFormatVersion: 2
-guid: 2093734e5d38b4b4bb8d404f9e75f102
+guid: abe1f621d437402409eac63b22c14d42
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: backWall
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: floor
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: leftWall
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: rightWall
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: shortBox
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: tallBox
-    second: {fileID: 2100000, guid: 3b4b0e2f0c397ac47a26eab27027609c, type: 2}
+  externalObjects: {}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -76,7 +46,7 @@ ModelImporter:
     nodeNameCollisionStrategy: 1
     fileIdsGeneration: 2
     swapUVChannels: 0
-    generateSecondaryUV: 0
+    generateSecondaryUV: 1
     useFileUnits: 1
     keepQuads: 0
     weldVertices: 1
