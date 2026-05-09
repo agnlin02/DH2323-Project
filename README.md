@@ -17,10 +17,14 @@ I changed the line to a raycast that shoots from the water surface and hits the 
 <img width="891" height="706" alt="image" src="https://github.com/user-attachments/assets/d2600240-b3c5-459f-beac-4924f6690c87" />
 
 3.3 Calculated the angle for the raycast using snell's law. 
-Created white dots where the ray cast hit the ground. This by coloring the texture. The folowing screenshots are from scaling the water. As you can se the raycast creates 
-<img width="2820" height="1128" alt="Skärmbild 2026-05-08 165249" src="https://github.com/user-attachments/assets/d5c40677-6bc9-463f-bda9-21af48848ab3" />
-<img width="2848" height="1049" alt="Skärmbild 2026-05-08 165455" src="https://github.com/user-attachments/assets/0e23a32a-ca30-4b0f-9343-7ab7b7a780e1" />
+Created white dots where the ray cast hit the ground. This by coloring the texture. 
 <img width="1876" height="911" alt="Skärmbild 2026-05-08 165908" src="https://github.com/user-attachments/assets/35284d79-8e00-48e8-aa21-7f011172fa78" />
+
+The folowing screenshots are from scaling the water. As you can se the raycast creates 
+<img width="2848" height="1049" alt="Skärmbild 2026-05-08 165455" src="https://github.com/user-attachments/assets/0e23a32a-ca30-4b0f-9343-7ab7b7a780e1" />
+<img width="2820" height="1128" alt="Skärmbild 2026-05-08 165249" src="https://github.com/user-attachments/assets/d5c40677-6bc9-463f-bda9-21af48848ab3" />
+
+
 
 
 
