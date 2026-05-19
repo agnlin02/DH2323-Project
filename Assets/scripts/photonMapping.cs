@@ -85,14 +85,6 @@ public class photonMapping : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
-    { 
-      
-    }
-
-    
-
     void photonRay(Vector3 startPosition)
     {
         // Ray from light to surface
@@ -221,7 +213,24 @@ public class photonMapping : MonoBehaviour
         // Debug.Log($"Painting at u:{u:F3} v:{v:F3} → px:{px} py:{py} on tex:{tex.GetInstanceID()}");
         // Debug.Log($"Renderer material tex: {hit2.transform.GetComponent<Renderer>().material.GetTexture("_BaseMap")?.GetInstanceID()}");
 
-        tex.SetPixel(px, py, Color.white);
+         Color current = tex.GetPixel(px, py);
+
+        float add = 0.5f;
+
+        current.r += add;
+        current.g += add;
+        current.b += add;
+        current.a += add;
+
+        current.r = Mathf.Clamp01(current.r);
+        current.g = Mathf.Clamp01(current.g);
+        current.b = Mathf.Clamp01(current.b);
+        current.a = Mathf.Clamp01(current.a);
+
+        
+        tex.SetPixel(px, py, current);
+
+        //tex.SetPixel(px, py, Color.white);
         tex.Apply();
 
         //Color check = tex.GetPixel(px, py);
