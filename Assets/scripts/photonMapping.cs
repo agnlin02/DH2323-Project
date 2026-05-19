@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 public class photonMapping : MonoBehaviour
 {
@@ -17,6 +18,21 @@ public class photonMapping : MonoBehaviour
     LayerMask groundMask;
     LayerMask waterMask;
     private Dictionary<Renderer, Texture2D> _texCache = new();
+
+    private Dictionary<Vector2, int> textureMap = new Dictionary<Vector2, int>();
+
+    private Texture2D groundTexture;
+
+
+/*     private class Photon()
+    {
+        public required Vector3 Position { get; init; }
+        public required char power { get; init; }
+        public required char phi { get; init; }
+        public required char theta { get; init; }
+        public required short flag { get; init; }
+        
+    } */
 
    void Awake()
     {
@@ -50,6 +66,16 @@ public class photonMapping : MonoBehaviour
             float max = light_size / 2.0f;
             float diff = max - min;
             float step_size = diff/num_rays;
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            for(int i = 0; i <= texture_resolution; i++)
+            {
+                for (int j = 0; j <= texture_resolution; j++) 
+                {
+                    textureMap.Add(new Vector2(i,j), 0);
+                }
+            }
+
             for(float i = min; i < max; i+=step_size)
             {
                 for (float j = min; j < max; j+=step_size) 
@@ -57,6 +83,10 @@ public class photonMapping : MonoBehaviour
                     photonRay(transform.position + new Vector3(i, 0, j));
                 }
             }
+            stopwatch.Stop();
+            print("Time for"+ Mathf.Pow(num_rays, 2) + "rays: " + stopwatch.ElapsedMilliseconds);
+
+            paintTexture();
         }
     }
 
@@ -89,6 +119,35 @@ public class photonMapping : MonoBehaviour
             mat.color = Color.white;
             _texCache[rend] = tex;
         }
+    }
+
+    void paintTexture()
+    {
+        foreach (KeyValuePair<Vector2, int> pair in textureMap) 
+        {
+            int px = (int)pair.Key.x;
+            int py = (int)pair.Key.y;
+
+            float level = 0.1f + 0.4f * pair.Value;
+            Color curr_color = groundTexture.GetPixel(px, py);
+
+            Color new_color = new Color(curr_color.r + level, curr_color.g + level, curr_color.b + level);
+
+            groundTexture.SetPixel(px, py, new_color);
+
+/*             int searchRadius = 2;
+            for(int x = px - searchRadius; x <= px + searchRadius; x++)
+            {
+                for (int y = py - searchRadius; y <= py + searchRadius; y++)
+                {
+                    Vector2 curr_position = new Vector2(x, y);
+                    float dist = Vector2.Distance(pair.Key, curr_position);
+                    Color neighbour_color = new_color * (searchRadius - dist);
+                    groundTexture.SetPixel(x, y, neighbour_color);
+                }
+            } */
+        }
+        groundTexture.Apply();
     }
 
     // Update is called once per frame
@@ -140,8 +199,12 @@ public class photonMapping : MonoBehaviour
             if (rend == null) return;
             if (!_texCache.TryGetValue(rend, out Texture2D tex))
             {
-                Debug.LogWarning($"{curr_hit.transform.name} not in cache!");
+                print($"{curr_hit.transform.name} not in cache!");
                 return;
+            }
+            if (! groundTexture)
+            {
+                groundTexture = tex;
             }
 
             Mesh mesh = curr_hit.collider.GetComponent<MeshFilter>().mesh;
@@ -150,8 +213,11 @@ public class photonMapping : MonoBehaviour
             pixelUV.x *= tex.width;
             pixelUV.y *= tex.height;
 
-            tex.SetPixel((int)pixelUV.x, (int)pixelUV.y, new Color(1f, 1f, 1f, 1f * Mathf.Pow(0.5f, bounce)));
-            tex.Apply();
+            Vector2 positionTexture = new Vector2((int)pixelUV.x, (int)pixelUV.y);
+
+            int curr_hits = textureMap[positionTexture];
+            textureMap[positionTexture] = curr_hits + 1;
+
 
             // Reflect the ray at the surface
             Vector3 n = curr_hit.normal.normalized;

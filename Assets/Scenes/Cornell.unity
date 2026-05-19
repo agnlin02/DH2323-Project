@@ -358,7 +358,7 @@ Transform:
   m_GameObject: {fileID: 188832737}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0.05, y: 4.74, z: -0.49}
+  m_LocalPosition: {x: 0.05, y: 7.49, z: -0.49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -400,8 +400,8 @@ MonoBehaviour:
   texture_resolution: 512
   num_bounces: 1
   singleRay: 0
-  num_rays: 50
-  light_size: 6
+  num_rays: 100
+  light_size: 10
 --- !u!114 &199886597
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -505,7 +505,7 @@ Transform:
   m_GameObject: {fileID: 199886595}
   serializedVersion: 2
   m_LocalRotation: {x: 0.49106085, y: -0.47124672, z: 0.51016265, w: 0.5258516}
-  m_LocalPosition: {x: 0, y: 9, z: 0}
+  m_LocalPosition: {x: -0, y: 11.5, z: -0.2}
   m_LocalScale: {x: 100.000015, y: 100, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
