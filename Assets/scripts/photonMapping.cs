@@ -125,6 +125,7 @@ public class photonMapping : MonoBehaviour
     {
         foreach (KeyValuePair<Vector2, int> pair in textureMap) 
         {
+            if(pair.Value == 0) continue;
             int px = (int)pair.Key.x;
             int py = (int)pair.Key.y;
 
@@ -135,16 +136,21 @@ public class photonMapping : MonoBehaviour
 
             groundTexture.SetPixel(px, py, new_color);
 
-/*             int searchRadius = 2;
-            for(int x = px - searchRadius; x <= px + searchRadius; x++)
+
+    //Lovisas smooth funktion 
+      /*       int search_radius = 2;
+            float max_search_dist = Mathf.Sqrt(2* Mathf.Pow(search_radius, 2));
+            for(int x = px - search_radius; x <= px + search_radius; x++)
             {
-                for (int y = py - searchRadius; y <= py + searchRadius; y++)
+                for (int y = py - search_radius; y <= py + search_radius; y++)
                 {
-                    Vector2 curr_position = new Vector2(x, y);
-                    float dist = Vector2.Distance(pair.Key, curr_position);
-                    Color neighbour_color = new_color * (searchRadius - dist);
+                    Vector2 neighbour_position = new Vector2(x, y);
+                    float dist = Vector2.Distance(pair.Key, neighbour_position);
+
+                    Color neighbour_color = groundTexture.GetPixel(x, y) + new_color * (max_search_dist - dist);
                     groundTexture.SetPixel(x, y, neighbour_color);
                 }
+                
             } */
         }
         groundTexture.Apply();
