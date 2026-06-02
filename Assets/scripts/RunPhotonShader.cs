@@ -6,6 +6,7 @@ public class RunPhotonShader : MonoBehaviour
 {
     public ComputeShader computeShader;
     public Light lightSource;
+    public Camera camera;
     public MeshFilter[] groundObjects;
     public MeshFilter[] waterObjects;
 
@@ -13,7 +14,10 @@ public class RunPhotonShader : MonoBehaviour
     public float eta2 = 1.333f;
 
 
-    private RenderTexture result;
+    private RenderTexture photonCount;
+    private RenderTexture screenRender;
+    private RenderTexture texRender;
+    private Texture2D displayTex;
     private ComputeBuffer groundTriangleBuffer;
     private ComputeBuffer waterTriangleBuffer;
 
@@ -29,15 +33,45 @@ public class RunPhotonShader : MonoBehaviour
     int texWidth = 512;
     int texHeight = 512;
 
+    bool needsDisplay = false;
+
     void Start()
     {
-        result = new RenderTexture(texWidth, texHeight, 0, RenderTextureFormat.ARGB32);
-        result.enableRandomWrite = true;
-        result.Create();
+        photonCount = new RenderTexture(texWidth, texHeight, 0, RenderTextureFormat.RInt);
+        photonCount.enableRandomWrite = true;
+        photonCount.Create();
+
+        screenRender = new RenderTexture(texWidth, texHeight, 0, RenderTextureFormat.ARGBFloat);
+        screenRender.enableRandomWrite = true;
+        screenRender.Create();
+        texRender = new RenderTexture(texWidth, texHeight, 0, RenderTextureFormat.ARGBFloat);
+        texRender.enableRandomWrite = true;
+        texRender.Create();
 
         BuildTriangleBuffers();
-        CastRays();
+        CastLightRays();
+        CastCameraRays();
         ApplyTex();
+
+        needsDisplay = true;
+    }
+
+    void Update()
+    {
+        if (needsDisplay)
+        {
+            ConvertForDisplay();
+            needsDisplay = false;
+        }
+    }
+
+    void ConvertForDisplay()
+    {
+        RenderTexture.active = screenRender; // swap to photonCount
+        displayTex = new Texture2D(texWidth, texHeight, TextureFormat.RGBAFloat, false); // match photonCount format
+        displayTex.ReadPixels(new Rect(0, 0, texWidth, texHeight), 0, 0);
+        displayTex.Apply();
+        RenderTexture.active = null;
     }
 
     void ApplyTex()
@@ -45,10 +79,10 @@ public class RunPhotonShader : MonoBehaviour
         foreach (var obj in groundObjects)
         {
             Renderer rend = obj.GetComponent<Renderer>();
-            //Graphics.Blit(Texture2D.whiteTexture, result);
+            //Graphics.Blit(Texture2D.whiteTexture, photonCount);
 
             Material m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            m.SetTexture("_BaseMap", result);
+            m.SetTexture("_BaseMap", texRender);
             rend.material = m;
         }
     }
@@ -102,45 +136,70 @@ public class RunPhotonShader : MonoBehaviour
         return buffer;
     }
 
-    void CastRays()
+    void CastLightRays()
     {
         int kernel = computeShader.FindKernel("PhotonRay");
 
-        computeShader.SetTexture(kernel, "Result", result);
+        computeShader.SetTexture(kernel, "PhotonCount", photonCount);
         computeShader.SetBuffer(kernel, "GroundTriangles", groundTriangleBuffer);
         computeShader.SetBuffer(kernel, "WaterTriangles", waterTriangleBuffer);
 
         computeShader.SetInt("GroundTriangleCount", groundTriangleBuffer.count);
         computeShader.SetInt("WaterTriangleCount", waterTriangleBuffer.count);
-
-        computeShader.SetVector("LightPosition", lightSource.transform.position);
         computeShader.SetInt("TextureWidth", texWidth);
         computeShader.SetInt("TextureHeight", texHeight);
+
+        computeShader.SetVector("LightPosition", lightSource.transform.position);
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
 
         computeShader.Dispatch(kernel, texWidth / 8, texHeight / 8, 1);
 
+        Debug.Log("Rays cast");
+
+    }
+
+    void CastCameraRays()
+    {
         // TODO: Second pass for displaying light, first pass only for counting (might add more secondary passes)
 
-/*         int kernel2 = computeShader.FindKernel("PhotonDisplay");
-        computeShader.SetTexture(kernel2, "PhotonCounts", PhotonCounts);
-        computeShader.SetTexture(kernel2, "Result", result);
-        computeShader.Dispatch(kernel2, texWidth / 8, texHeight / 8, 1); */
+        int kernel2 = computeShader.FindKernel("ScreenRay");
+        computeShader.SetTexture(kernel2, "PhotonCount", photonCount);
+        computeShader.SetBuffer(kernel2, "GroundTriangles", groundTriangleBuffer);
+
+        computeShader.SetInt("GroundTriangleCount", groundTriangleBuffer.count);
+        computeShader.SetInt("TextureWidth", texWidth);
+        computeShader.SetInt("TextureHeight", texHeight);
+
+        computeShader.SetTexture(kernel2, "Result", screenRender);
+        computeShader.SetTexture(kernel2, "Result2", texRender);
+        Camera cam = camera;
+        computeShader.SetVector("CameraPosition", cam.transform.position);
+        computeShader.SetVector("CameraForward", cam.transform.forward);
+        computeShader.SetVector("CameraUp", cam.transform.up);
+        computeShader.SetVector("CameraRight", cam.transform.right);
+        computeShader.SetFloat("CameraFOV", cam.fieldOfView);
+
+
+        computeShader.Dispatch(kernel2, texWidth / 8, texHeight / 8, 1);
+
+        Debug.Log("Screen rays cast");
     }
 
     void OnGUI()
     {
-        // Does not work in current version since UV is written to (using Result[tex_coord] instead of Result[id.xy])
-        GUI.DrawTexture(new Rect(0, 0, texWidth, texHeight), result);
-    } 
+    if (displayTex != null)
+        GUI.DrawTexture(new Rect(0, 0, texWidth, texHeight), displayTex);
+    }
+
     void OnDestroy()
     {
         waterTriangleBuffer?.Release();
         groundTriangleBuffer?.Release();
 
-        result?.Release();
-        /* PhotonCounts?.Release(); */
+        screenRender?.Release();
+        texRender?.Release();
+        photonCount?.Release();
     }
 
 }

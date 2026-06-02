@@ -1,6 +1,4 @@
-// Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel PhotonRay
-#pragma kernel ScreenRay
+/* // Each #kernel tells which function to compile; you can have many kernels
 
 
 struct Ray 
@@ -18,28 +16,20 @@ struct Triangle
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<int> PhotonCount;
+RWTexture2D<uint> PhotonCount;
 RWTexture2D<float4> Result;
-RWTexture2D<float4> Result2;
 
 StructuredBuffer<Triangle> GroundTriangles;
-StructuredBuffer<Triangle> WaterTriangles;
-
 int GroundTriangleCount;
-int WaterTriangleCount;
 
-float3 LightPosition;
 int TextureWidth;
 int TextureHeight;
-float eta1;
-float eta2;
 
 float3 CameraPosition;
 float3 CameraForward;
 float3 CameraUp;
 float3 CameraRight;
 float CameraFOV;
-
 
 // Returns hit point on ray (t) and hit point on triangle in barycentric coordinates (u, v, (1-u-v))
 // taken from https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -52,10 +42,6 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
 
     float3 edge1 = tri.v1 - tri.v0;
     float3 edge2 = tri.v2 - tri.v0;
-
-    // Backface culling, assuming CCW-wound triangles.
-    /*float3 normal = cross(edge1, edge2); // No need to normalize
-	if (dot(normal, ray_dir) > 0) return false; */
 
     float3 ray_cross_e2 = cross(ray_dir, edge2);
     float det = dot(edge1, ray_cross_e2);
@@ -85,92 +71,6 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
         return true;
     }
     return false;
-}
-
-
-
-[numthreads(8,8,1)]
-void PhotonRay (uint3 id : SV_DispatchThreadID)
-{
-    if (id.x >= (uint) TextureWidth || id.y >= (uint) TextureHeight) {return;} 
-
-
-    float u = id.x / (float)TextureWidth;
-    float v = id.y / (float)TextureHeight;
-
-    Ray ray;
-    ray.origin = LightPosition;
-    ray.dir = normalize(float3((u - 0.5), -1, (v - 0.5)));  // Create cone of light
-
-    bool hit_water = false;
-
-    // Check if the light intersects the water surface
-    for (int i = 0; i < WaterTriangleCount; i++)
-    {
-        float t, bu, bv;
-        Triangle curr_tri = WaterTriangles[i];
-        if (ray_intersects_triangle(ray, curr_tri, t, bu, bv))
-        {
-            hit_water = true;
-
-            // Calculate end points and direction for the ray
-            float3 hit_normal = normalize(curr_tri.normal);
-            float3 hit_point = (1-bu-bv)* curr_tri.v0 + bu* curr_tri.v1 + bv* curr_tri.v2;
-
-            float3 e = normalize(hit_point - ray.origin);
-
-            float eta_rel = eta1/eta2;
-            float mult = dot(e, hit_normal);
-            float under_sqrt = 1 + pow(eta_rel, 2) * (pow(mult, 2)-1);
-
-            float3 new_dir = hit_normal * (eta_rel* mult - sqrt(1+pow(eta_rel, 2) * (pow(mult, 2) - 1))) + eta_rel*e;
-
-            // Update ray position and direction
-            ray.origin = hit_point;
-            ray.dir = new_dir;
-            break;
-
-        }
-    } 
-
-    // TODO: Monte Carlo for each hit, probabilities depend on material
-
-    float closest = 1e9;
-    int hit_index = -1;
-    float hit_u = 0, hit_v = 0;
-
-    // Check if the light intersects the box
-    for (int j = 0; j < GroundTriangleCount; j++) 
-    {
-        float t, bu, bv;
-        if (ray_intersects_triangle(ray, GroundTriangles[j], t, bu, bv))
-        {
-            if (t < closest)
-            {
-                closest = t;
-                hit_index = j;
-                hit_u = bu;
-                hit_v = bv;
-            }
-        }
-    }
-    // If no ground is hit, continue
-    if (hit_index < 0) {
-        return;
-    }
-
-    // Translate from barycentric to UV coordinate
-    Triangle hit_tri = GroundTriangles[hit_index];
-    float2 hit_uv = (1-hit_u-hit_v)* hit_tri.uv0 + hit_u* hit_tri.uv1 + hit_v* hit_tri.uv2;
-
-
-    uint2 tex_coord = uint2(hit_uv.x * TextureWidth, hit_uv.y * TextureHeight);
-    tex_coord.x = clamp(tex_coord.x, 0, TextureWidth-1);
-    tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
-
-
-    // Update texture with light
-    PhotonCount[tex_coord] += 1;
 }
 
 
@@ -223,8 +123,7 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
     uint numPhotons = PhotonCount[tex_coord];
-    float brightness = 0.1 * numPhotons;
     // Update texture with light
-    Result[id.xy] = float4(brightness, brightness, brightness, 1);
-    Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Kan flyttas till annat ställe, måste bara göras efter PhotonRay är klar
-}
+    Result[id.xy] = float4(0.1 * numPhotons, 0.1 * numPhotons, 0.1 * numPhotons, 1);
+
+} */
