@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Runtime.InteropServices;
 using UnityEngine.Experimental.Rendering;
+using System;
+using System.Diagnostics;
 
 public class RunPhotonShader : MonoBehaviour
 {
@@ -10,8 +12,9 @@ public class RunPhotonShader : MonoBehaviour
     public MeshFilter[] groundObjects;
     public MeshFilter[] waterObjects;
 
-    public float eta1 = 1.0003f;
-    public float eta2 = 1.333f;
+    public float eta1 = 1.0003f;            // Air index of refraction
+    public float eta2 = 1.333f;             // Water index of refraction
+    public int gatheringRadius = 5;
 
 
     private RenderTexture photonCount;
@@ -30,8 +33,8 @@ public class RunPhotonShader : MonoBehaviour
         public Vector2 uv0, uv1, uv2;
     }
 
-    int texWidth = 512;
-    int texHeight = 512;
+    int texWidth = 512*2;
+    int texHeight = 512*2;
 
     bool needsDisplay = false;
 
@@ -48,9 +51,18 @@ public class RunPhotonShader : MonoBehaviour
         texRender.enableRandomWrite = true;
         texRender.Create();
 
+        Stopwatch stopwatch = Stopwatch.StartNew();
         BuildTriangleBuffers();
+        stopwatch.Stop();
+        print("Time for building buffers: " + stopwatch.ElapsedMilliseconds + "ms");
+        Stopwatch stopwatch2 = Stopwatch.StartNew();
         CastLightRays();
+        stopwatch2.Stop();
+        print("Time for casting light rays " + stopwatch2.ElapsedMilliseconds + "ms");
+        Stopwatch stopwatch3 = Stopwatch.StartNew();
         CastCameraRays();
+        stopwatch3.Stop();
+        print("Time for casting camera rays " + stopwatch3.ElapsedMilliseconds + "ms");
         ApplyTex();
 
         needsDisplay = true;
@@ -153,10 +165,23 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
 
+
         computeShader.Dispatch(kernel, texWidth / 8, texHeight / 8, 1);
 
-        Debug.Log("Rays cast");
+        //print("Rays cast");
 
+    }
+
+    void DebugReadPixel(RenderTexture rt, int x, int y)
+    {
+        RenderTexture.active = rt;
+        Texture2D debug = new Texture2D(rt.width, rt.height, TextureFormat.RGBAFloat, false);
+        debug.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        debug.Apply();
+        RenderTexture.active = null;
+        
+        Color pixel = debug.GetPixel(x, y);
+        print($"Pixel at ({x},{y}): r={pixel.r} g={pixel.g} b={pixel.b} a={pixel.a}");
     }
 
     void CastCameraRays()
@@ -170,6 +195,8 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetInt("GroundTriangleCount", groundTriangleBuffer.count);
         computeShader.SetInt("TextureWidth", texWidth);
         computeShader.SetInt("TextureHeight", texHeight);
+        computeShader.SetInt("GatheringRadius", gatheringRadius);
+
 
         computeShader.SetTexture(kernel2, "Result", screenRender);
         computeShader.SetTexture(kernel2, "Result2", texRender);
@@ -183,7 +210,8 @@ public class RunPhotonShader : MonoBehaviour
 
         computeShader.Dispatch(kernel2, texWidth / 8, texHeight / 8, 1);
 
-        Debug.Log("Screen rays cast");
+        DebugReadPixel(screenRender, 256, 256);
+        //print("Screen rays cast");
     }
 
     void OnGUI()

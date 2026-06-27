@@ -33,6 +33,7 @@ int TextureWidth;
 int TextureHeight;
 float eta1;
 float eta2;
+int GatheringRadius;
 
 float3 CameraPosition;
 float3 CameraForward;
@@ -87,23 +88,39 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     return false;
 }
 
-
-
-[numthreads(8,8,1)]
-void PhotonRay (uint3 id : SV_DispatchThreadID)
+float GatherPhotons(float2 centerPixel, float radiusPixels)
 {
-    if (id.x >= (uint) TextureWidth || id.y >= (uint) TextureHeight) {return;} 
+    float total = 0;
+    if (radiusPixels == 0) {return PhotonCount[centerPixel];}
+    
+    // Get all pixels within a square
+    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
+    {
+        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
+        {
+            // Check if in circle
+            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
+            {
+                int2 coord = 
+                clamp(
+                    centerPixel + int2(dx, dy), 
+                    int2(0,0), 
+                    int2(TextureWidth-1, TextureHeight-1)
+                );
+                total += PhotonCount[coord];
+            }
+        }
+    }
+    
+    float area = 3.14159 * radiusPixels * radiusPixels;
+    return total / area;
+}
 
 
-    float u = id.x / (float)TextureWidth;
-    float v = id.y / (float)TextureHeight;
-
-    Ray ray;
-    ray.origin = LightPosition;
-    ray.dir = normalize(float3((u - 0.5), -1, (v - 0.5)));  // Create cone of light
-
+bool CheckWaterHit(inout Ray ray)
+{
     bool hit_water = false;
-
+    
     // Check if the light intersects the water surface
     for (int i = 0; i < WaterTriangleCount; i++)
     {
@@ -132,13 +149,13 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
 
         }
     } 
+    return hit_water;
+}
 
-    // TODO: Monte Carlo for each hit, probabilities depend on material
 
+void CheckGroundHit(inout Ray ray, inout int hit_index, inout float hit_u, inout float hit_v)
+{
     float closest = 1e9;
-    int hit_index = -1;
-    float hit_u = 0, hit_v = 0;
-
     // Check if the light intersects the box
     for (int j = 0; j < GroundTriangleCount; j++) 
     {
@@ -154,7 +171,35 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
             }
         }
     }
-    // If no ground is hit, continue
+}
+
+
+[numthreads(8,8,1)]
+void PhotonRay (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint) TextureWidth || id.y >= (uint) TextureHeight) {return;} 
+
+
+    float u = id.x / (float)TextureWidth;
+    float v = id.y / (float)TextureHeight;
+
+    Ray ray;
+    ray.origin = LightPosition;
+    ray.dir = normalize(float3((u - 0.5), -1, (v - 0.5)));  // Create cone of light
+
+    bool hit_water = CheckWaterHit(ray);
+    while (hit_water) {
+        hit_water = CheckWaterHit(ray);
+    }
+
+    // TODO: Monte Carlo for each hit, probabilities depend on material
+
+    int hit_index = -1;
+    float hit_u = 0, hit_v = 0;
+
+    CheckGroundHit(ray, hit_index, hit_u, hit_v);
+
+    // If no ground is hit, ignore
     if (hit_index < 0) {
         return;
     }
@@ -213,18 +258,21 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // Translate from barycentric to UV coordinate
+    // Translate from barycentric to texture coordinate
     Triangle hit_tri = GroundTriangles[hit_index];
     float2 hit_uv = (1-hit_u-hit_v)* hit_tri.uv0 + hit_u* hit_tri.uv1 + hit_v* hit_tri.uv2;
-
 
     uint2 tex_coord = uint2(hit_uv.x * TextureWidth, hit_uv.y * TextureHeight);
     tex_coord.x = clamp(tex_coord.x, 0, TextureWidth-1);
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
+    // Gather photons
     uint numPhotons = PhotonCount[tex_coord];
-    float brightness = 0.1 * numPhotons;
+    float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
+    float brightness = raw/12.0; // Reinhard tone mapping
+
     // Update texture with light
-    Result[id.xy] = float4(brightness, brightness, brightness, 1);
-    Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Kan flyttas till annat ställe, måste bara göras efter PhotonRay är klar
+    Result[id.xy] = float4(brightness, brightness, brightness, 1);  // Graphics
+    Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Texture painting
 }
+
