@@ -179,10 +179,6 @@ public class photonMapping : MonoBehaviour
             lineRenderer.SetPosition(1, hit.point);
         }
 
-        // Calculate end points and direction for the ray
-        Vector3 endPoint = hit.point + hit.normal * -2f;
-        Vector3 direction = endPoint - hit.point;
-
         Vector3 e = (hit.point - startPosition).normalized;
 
         float eta_rel = eta1/eta2;

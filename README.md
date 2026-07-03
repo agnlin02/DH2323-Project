@@ -1,4 +1,5 @@
-# Water Caustincs uisng Snell's law and Photon Mapping
+# BLOG
+## Water Caustincs uisng Snell's law and Photon Mapping
 
 ### New unityproject, raycast and linerender (3 May)
 Initiated a project in uinty. Added a water mesh at top of a simple room, made up of planes and cubes. A light was added to the scene with a script. Using the script a raycast was shooting from the light and as it hit the water a linerender was created. Next a raycast was created in the direction of the normal of the hitpoint.
@@ -36,6 +37,30 @@ Then we identified for which pixels there was more than one hit.
 As the third step we scaled the brightness of the pixel according to how many hits were there. In order for us to see a clear difference we used a brightness of 0.1 + 0.4 * num_hits clamped to \[0,1].
 <img width="650" alt="Skärmbild 2026-05-19 125006" src="https://github.com/user-attachments/assets/a60c6d12-040b-440f-9623-07fd27aae8a2" />
 
+### Rendering (2 June)
+At this step we had started to notice that our project was more about physically modelling light rays and not so much a rendering technique. In order to remedy this we looked into changing from a CPU based project to a GPU project by making it into compute shaders instead of C# [^5]. This way we could have one pass of sending photon rays and one pass of camera rays. In order to more accurately follow other examples we had seen, we decided to make the photons go out in a cone form instead of straight down as before, this created shadows where no photons hit. 
+
+In total this took our total photon tracing time from 332ms with 1000 rays to 10ms with 262144 rays.
+<img width="404" alt="Screenshot 2026-05-28 145604" src="https://github.com/user-attachments/assets/4e6a3c16-d0d6-4307-9424-c6d1ddb399fa" />
+<img width="404" alt="Screenshot 2026-06-02 211737" src="https://github.com/user-attachments/assets/6af79032-d937-496f-972c-feca98c846b8" />
+
+The code was structured as:
+1. Save all triangles in the water mesh and ground mesh in buffers.
+2. Dispatch photon rays and increment a counter where in the UV texture they hit.
+3. Dispatch camera rays and where they hit check the counter for that pixel in the texture and save an illumination accordingly.
+
+
+### Smoothing (27 June)
+Now we could start with how to best smooth out the light instead of only coloring based on pixel hits. We added this to the camera ray step. This way each pixel visible from the camera would have a brightness based on how many hits its neightbour had within a specified radius, which is the simplest way we thought of to do smoothing. This increased the time for casting camera rays from 0ms to 458ms for a radius of 6 pixels. 
+
+<img width="300" alt="no_radius" src="https://github.com/user-attachments/assets/78c89972-ee6a-48ae-b15e-65e9f0ea25bf" />
+<img width="300" alt="1028px_r6_normal" src="https://github.com/user-attachments/assets/597c0179-4769-4cf3-9ff9-da0feee21c56" />
+<img width="300" alt="1028px_r10_normal" src="https://github.com/user-attachments/assets/a5b31c49-0865-4da4-8b5c-915a506affaf" />
+
+_No smoothing radius_ &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; _radius of 6_ &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; _radius of 10_
+
+This smoothing makes it more obvious that our new water mesh had the same problem as our old one, the triangles create noticable gaps in the pixels being hit with photon rays. The next steps will be to evaluate different smoothing types. 
+
 
 [^1]: https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-2-rendering-water-caustics
 
@@ -44,4 +69,8 @@ As the third step we scaled the brightness of the pixel according to how many hi
 [^3]: https://sketchfab.com/3d-models/cornell-box-original-0d18de8d108c4c9cab1a4405698cc6b6
 
 [^4]: https://pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Stochastic_Progressive_Photon_Mapping
+
+[^5]: https://catlikecoding.com/unity/tutorials/basics/compute-shaders/
+
+
    
