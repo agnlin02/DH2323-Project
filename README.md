@@ -53,9 +53,9 @@ The code was structured as:
 ### Smoothing (27 June)
 Now we could start with how to best smooth out the light instead of only coloring based on pixel hits. We added this to the camera ray step. This way each pixel visible from the camera would have a brightness based on how many hits its neightbour had within a specified radius, which is the simplest way we thought of to do smoothing. This increased the time for casting camera rays from 0ms to 458ms for a radius of 6 pixels. 
 
-<img width="300" alt="no_radius" src="https://github.com/user-attachments/assets/78c89972-ee6a-48ae-b15e-65e9f0ea25bf" />
-<img width="300" alt="1028px_r6_normal" src="https://github.com/user-attachments/assets/597c0179-4769-4cf3-9ff9-da0feee21c56" />
-<img width="300" alt="1028px_r10_normal" src="https://github.com/user-attachments/assets/a5b31c49-0865-4da4-8b5c-915a506affaf" />
+<img width="250" alt="no_radius" src="https://github.com/user-attachments/assets/78c89972-ee6a-48ae-b15e-65e9f0ea25bf" />
+<img width="250" alt="1028px_r6_normal" src="https://github.com/user-attachments/assets/597c0179-4769-4cf3-9ff9-da0feee21c56" />
+<img width="250" alt="1028px_r10_normal" src="https://github.com/user-attachments/assets/a5b31c49-0865-4da4-8b5c-915a506affaf" />
 
 _No smoothing radius_ &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; _radius of 6_ &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; _radius of 10_
 
