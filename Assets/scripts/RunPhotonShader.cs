@@ -16,6 +16,9 @@ public class RunPhotonShader : MonoBehaviour
     public float eta2 = 1.333f;             // Water index of refraction
     public int gatheringRadius = 5;
 
+    //Number of photons shooting from lightsource
+    public int numPhotons = 100;
+
 
     private RenderTexture photonCount;
     private RenderTexture screenRender;
@@ -23,6 +26,7 @@ public class RunPhotonShader : MonoBehaviour
     private Texture2D displayTex;
     private ComputeBuffer groundTriangleBuffer;
     private ComputeBuffer waterTriangleBuffer;
+    private ComputeBuffer photonBuffer;
 
 
     [StructLayout(LayoutKind.Sequential)]
@@ -31,6 +35,13 @@ public class RunPhotonShader : MonoBehaviour
         public Vector3 v0, v1, v2;
         public Vector3 normal;
         public Vector2 uv0, uv1, uv2;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct Photon
+    {
+        public int strenght;
+        public Vector2 position;
     }
 
     int texWidth = 512*2;
@@ -104,6 +115,7 @@ public class RunPhotonShader : MonoBehaviour
     {
         groundTriangleBuffer = BuildBuffer(groundObjects);
         waterTriangleBuffer = BuildBuffer(waterObjects);
+        photonBuffer = BuildBufferPhoton();
     }
 
     // Add all triangles to the buffer
@@ -148,6 +160,18 @@ public class RunPhotonShader : MonoBehaviour
         return buffer;
     }
 
+    ComputeBuffer BuildBufferPhoton()
+    {
+        Photon[] photons = new Photon[numPhotons];
+
+        photons[0].position = new Vector3(1, 2, 3);
+        photons[0].strenght = 10;
+
+        ComputeBuffer buffer =  new ComputeBuffer(photons.Length, Marshal.SizeOf(typeof(Photon)));
+        buffer.SetData(photons);
+        return buffer;
+    }
+
     void CastLightRays()
     {
         int kernel = computeShader.FindKernel("PhotonRay");
@@ -164,6 +188,8 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetVector("LightPosition", lightSource.transform.position);
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
+
+        computeShader.SetBuffer(kernel, "Photons", photonBuffer);
 
 
         computeShader.Dispatch(kernel, texWidth / 8, texHeight / 8, 1);
@@ -187,6 +213,7 @@ public class RunPhotonShader : MonoBehaviour
     void CastCameraRays()
     {
         // TODO: Second pass for displaying light, first pass only for counting (might add more secondary passes)
+        
 
         int kernel2 = computeShader.FindKernel("ScreenRay");
         computeShader.SetTexture(kernel2, "PhotonCount", photonCount);
@@ -231,3 +258,4 @@ public class RunPhotonShader : MonoBehaviour
     }
 
 }
+

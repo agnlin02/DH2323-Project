@@ -16,6 +16,14 @@ struct Triangle
     float2 uv0, uv1, uv2;
 };
 
+struct Photon
+{
+    int strenght;
+    float2 pv0, pv1;
+};
+
+
+
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWTexture2D<int> PhotonCount;
@@ -24,6 +32,7 @@ RWTexture2D<float4> Result2;
 
 StructuredBuffer<Triangle> GroundTriangles;
 StructuredBuffer<Triangle> WaterTriangles;
+StructuredBuffer<Photon> Photons;
 
 int GroundTriangleCount;
 int WaterTriangleCount;
@@ -77,7 +86,6 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     // The ray line intersects with the triangle.
     // We compute t to find where on the ray the intersection is.
     float t = inv_det * dot(edge2, s_cross_e1);
-
     if (t > epsilon)
     {
         time = t;
@@ -213,6 +221,8 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     tex_coord.x = clamp(tex_coord.x, 0, TextureWidth-1);
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
+    
+
 
     // Update texture with light
     PhotonCount[tex_coord] += 1;
@@ -275,4 +285,6 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
     Result[id.xy] = float4(brightness, brightness, brightness, 1);  // Graphics
     Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Texture painting
 }
+
+
 
