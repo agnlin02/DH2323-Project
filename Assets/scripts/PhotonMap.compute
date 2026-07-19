@@ -19,7 +19,9 @@ struct Triangle
 struct Photon
 {
     int strenght;
-    float2 pv0, pv1;
+    int angle1;
+    int angle2;
+    float2 px, py;
 };
 
 
@@ -29,10 +31,11 @@ struct Photon
 RWTexture2D<int> PhotonCount;
 RWTexture2D<float4> Result;
 RWTexture2D<float4> Result2;
+RWStructuredBuffer<Photon> Photons;
 
 StructuredBuffer<Triangle> GroundTriangles;
 StructuredBuffer<Triangle> WaterTriangles;
-StructuredBuffer<Photon> Photons;
+
 
 int GroundTriangleCount;
 int WaterTriangleCount;
@@ -49,6 +52,13 @@ float3 CameraForward;
 float3 CameraUp;
 float3 CameraRight;
 float CameraFOV;
+
+int photonsSize;
+
+
+//Photon[,] photonMatrix;
+
+
 
 
 // Returns hit point on ray (t) and hit point on triangle in barycentric coordinates (u, v, (1-u-v))
@@ -221,8 +231,11 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     tex_coord.x = clamp(tex_coord.x, 0, TextureWidth-1);
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
-    
 
+    uint index = id.y * photonsSize + id.x;
+    Photons[index].strenght += 1; //Todo: Skriv till angle
+    Photons[index].px = id.x;
+    Photons[index].py = id.y;
 
     // Update texture with light
     PhotonCount[tex_coord] += 1;

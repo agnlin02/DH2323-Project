@@ -40,14 +40,20 @@ public class RunPhotonShader : MonoBehaviour
     [StructLayout(LayoutKind.Sequential)]
     struct Photon
     {
-        public int strenght;
+        public int strength;
+        public int angle1;
+        public int angle2;
         public Vector2 position;
     }
 
-    int texWidth = 512*2;
-    int texHeight = 512*2;
+    static int texWidth = 512*2;
+    static int texHeight = 512*2;
+
+    static int photonSize = texWidth * texHeight;
 
     bool needsDisplay = false;
+
+    private Photon[] photons = new Photon[photonSize];
 
     void Start()
     {
@@ -115,7 +121,8 @@ public class RunPhotonShader : MonoBehaviour
     {
         groundTriangleBuffer = BuildBuffer(groundObjects);
         waterTriangleBuffer = BuildBuffer(waterObjects);
-        photonBuffer = BuildBufferPhoton();
+        //photonBuffer = BuildBufferPhoton();
+        photonBuffer = BuildBufferArray();
     }
 
     // Add all triangles to the buffer
@@ -160,17 +167,23 @@ public class RunPhotonShader : MonoBehaviour
         return buffer;
     }
 
-    ComputeBuffer BuildBufferPhoton()
+    /* ComputeBuffer BuildBufferPhoton()
     {
         Photon[] photons = new Photon[numPhotons];
 
         photons[0].position = new Vector3(1, 2, 3);
-        photons[0].strenght = 10;
+        photons[0].strength = 10;
 
-        ComputeBuffer buffer =  new ComputeBuffer(photons.Length, Marshal.SizeOf(typeof(Photon)));
+        ComputeBuffer buffer = new ComputeBuffer(photons.Length, Marshal.SizeOf(typeof(Photon)));
         buffer.SetData(photons);
         return buffer;
-    }
+    } */
+
+    ComputeBuffer BuildBufferArray(){
+        ComputeBuffer buffer = new ComputeBuffer(photonSize, Marshal.SizeOf(typeof(Photon)));
+        buffer.SetData(photons);
+        return buffer;
+    }    
 
     void CastLightRays()
     {
@@ -184,12 +197,14 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetInt("WaterTriangleCount", waterTriangleBuffer.count);
         computeShader.SetInt("TextureWidth", texWidth);
         computeShader.SetInt("TextureHeight", texHeight);
+        computeShader.SetInt("photonsSize", photonSize);
 
         computeShader.SetVector("LightPosition", lightSource.transform.position);
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
 
         computeShader.SetBuffer(kernel, "Photons", photonBuffer);
+        //computeShader.SetBuffer(kernel, "photonMatrix", photonMatrix);
 
 
         computeShader.Dispatch(kernel, texWidth / 8, texHeight / 8, 1);
