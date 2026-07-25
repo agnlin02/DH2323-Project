@@ -18,9 +18,8 @@ struct Triangle
 
 struct Photon
 {
-    int strenght;
-    int angle1;
-    int angle2;
+    int strength;
+    float3 direction;
     float2 px, py;
 };
 
@@ -135,6 +134,41 @@ float GatherPhotons(float2 centerPixel, float radiusPixels)
 }
 
 
+float3 GatherPhotonsDir(float2 centerPixel, float radiusPixels)
+{
+    float total = 0;
+    if (radiusPixels == 0) 
+    {
+        int index = centerPixel.y * TextureWidth + centerPixel.x;
+        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction;
+    }
+    
+    // Get all pixels within a square
+    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
+    {
+        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
+        {
+            // Check if in circle
+            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
+            {
+                int2 coord = 
+                clamp(
+                    centerPixel + int2(dx, dy), 
+                    int2(0,0), 
+                    int2(TextureWidth-1, TextureHeight-1)
+                );
+                int index = coord.y * TextureWidth + coord.x;
+                float3 phi = Photons[index].strength * float3(1, 1, 1);
+                float cos_theta = Photons[index].direction;
+                total += phi * cos_theta;
+            }
+        }
+    }
+    
+    float area = 3.14159 * radiusPixels * radiusPixels;
+    return total / area;
+}
+
 bool CheckWaterHit(inout Ray ray)
 {
     bool hit_water = false;
@@ -232,8 +266,9 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
 
-    uint index = id.y * photonsSize + id.x;
-    Photons[index].strenght += 1; //Todo: Skriv till angle
+    uint index = tex_coord.y * TextureWidth + tex_coord.x;
+    Photons[index].strength += 1;
+    Photons[index].direction = abs(dot(ray.dir, hit_tri.normal));
     Photons[index].px = id.x;
     Photons[index].py = id.y;
 
@@ -291,12 +326,13 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
 
     // Gather photons
     uint numPhotons = PhotonCount[tex_coord];
-    float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
-    float brightness = raw/12.0; // Reinhard tone mapping
+    //float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
+    float3 raw = GatherPhotonsDir((int2)tex_coord, GatheringRadius);
+    float3 brightness = raw/12.0; // Reinhard tone mapping
 
     // Update texture with light
-    Result[id.xy] = float4(brightness, brightness, brightness, 1);  // Graphics
-    Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Texture painting
+    Result[id.xy] = float4(brightness, 1);  // Graphics
+    Result2[tex_coord] = float4(brightness, 1);     // Texture painting
 }
 
 

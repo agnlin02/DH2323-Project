@@ -41,8 +41,7 @@ public class RunPhotonShader : MonoBehaviour
     struct Photon
     {
         public int strength;
-        public int angle1;
-        public int angle2;
+        public Vector3 direction;
         public Vector2 position;
     }
 
@@ -179,7 +178,8 @@ public class RunPhotonShader : MonoBehaviour
         return buffer;
     } */
 
-    ComputeBuffer BuildBufferArray(){
+    ComputeBuffer BuildBufferArray()
+    {
         ComputeBuffer buffer = new ComputeBuffer(photonSize, Marshal.SizeOf(typeof(Photon)));
         buffer.SetData(photons);
         return buffer;
@@ -192,6 +192,7 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetTexture(kernel, "PhotonCount", photonCount);
         computeShader.SetBuffer(kernel, "GroundTriangles", groundTriangleBuffer);
         computeShader.SetBuffer(kernel, "WaterTriangles", waterTriangleBuffer);
+        computeShader.SetBuffer(kernel, "Photons", photonBuffer);
 
         computeShader.SetInt("GroundTriangleCount", groundTriangleBuffer.count);
         computeShader.SetInt("WaterTriangleCount", waterTriangleBuffer.count);
@@ -203,7 +204,6 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
 
-        computeShader.SetBuffer(kernel, "Photons", photonBuffer);
         //computeShader.SetBuffer(kernel, "photonMatrix", photonMatrix);
 
 
@@ -233,6 +233,7 @@ public class RunPhotonShader : MonoBehaviour
         int kernel2 = computeShader.FindKernel("ScreenRay");
         computeShader.SetTexture(kernel2, "PhotonCount", photonCount);
         computeShader.SetBuffer(kernel2, "GroundTriangles", groundTriangleBuffer);
+        computeShader.SetBuffer(kernel2, "Photons", photonBuffer);
 
         computeShader.SetInt("GroundTriangleCount", groundTriangleBuffer.count);
         computeShader.SetInt("TextureWidth", texWidth);
@@ -270,6 +271,7 @@ public class RunPhotonShader : MonoBehaviour
         screenRender?.Release();
         texRender?.Release();
         photonCount?.Release();
+        photonBuffer?.Release();
     }
 
 }
