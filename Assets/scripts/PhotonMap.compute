@@ -24,9 +24,6 @@ struct Photon
 };
 
 
-
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
 RWTexture2D<int> PhotonCount;
 RWTexture2D<float4> Result;
 RWTexture2D<float4> Result2;
@@ -105,9 +102,9 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     return false;
 }
 
-float GatherPhotons(float2 centerPixel, float radiusPixels)
+/* float GatherPhotons(float2 centerPixel, float radiusPixels)
 {
-    float total = 0;
+    float3 total = float3(0,0,0);
     if (radiusPixels == 0) {return PhotonCount[centerPixel];}
     
     // Get all pixels within a square
@@ -131,12 +128,12 @@ float GatherPhotons(float2 centerPixel, float radiusPixels)
     
     float area = 3.14159 * radiusPixels * radiusPixels;
     return total / area;
-}
+} */
 
 
 float3 GatherPhotonsDir(float2 centerPixel, float radiusPixels)
 {
-    float total = 0;
+    float3 total = float3(0,0,0);
     if (radiusPixels == 0) 
     {
         int index = centerPixel.y * TextureWidth + centerPixel.x;
@@ -161,6 +158,50 @@ float3 GatherPhotonsDir(float2 centerPixel, float radiusPixels)
                 float3 phi = Photons[index].strength * float3(1, 1, 1);
                 float cos_theta = Photons[index].direction;
                 total += phi * cos_theta;
+            }
+        }
+    }
+    
+    float area = 3.14159 * radiusPixels * radiusPixels;
+    return total / area;
+}
+
+float3 GatherPhotonsGaussian(float2 centerPixel, float radiusPixels)
+{
+    float alpha = 0.918;
+    float beta = 1.953;
+    float e =  2.718281828459045235360287471;
+
+    float3 total = float3(0,0,0);
+    if (radiusPixels == 0) 
+    {
+        int index = centerPixel.y * TextureWidth + centerPixel.x;
+        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction;
+    }
+    
+    // Get all pixels within a square
+    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
+    {
+        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
+        {
+            // Check if in circle
+            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
+            {
+                int2 coord = 
+                clamp(
+                    centerPixel + int2(dx, dy), 
+                    int2(0,0), 
+                    int2(TextureWidth-1, TextureHeight-1)
+                );
+                int index = coord.y * TextureWidth + coord.x;
+
+                float distSqared = pow(centerPixel.x - coord.x, 2) + pow(centerPixel.y - coord.y, 2);
+                float term = (1 - pow(e, (-beta * distSqared/(2*pow(radiusPixels,2))))) / (1- pow(e,-beta));
+                float weight = alpha * (1 - term);
+
+                float3 phi = Photons[index].strength * float3(1, 1, 1);
+                float cos_theta = Photons[index].direction;
+                total += phi * cos_theta * weight;
             }
         }
     }
@@ -244,7 +285,7 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
         hit_water = CheckWaterHit(ray);
     }
 
-    // TODO: Monte Carlo for each hit, probabilities depend on material
+    // TODO: Monte Carlo for each hit, probabilities depend on material??
 
     int hit_index = -1;
     float hit_u = 0, hit_v = 0;
@@ -327,8 +368,8 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
     // Gather photons
     uint numPhotons = PhotonCount[tex_coord];
     //float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
-    float3 raw = GatherPhotonsDir((int2)tex_coord, GatheringRadius);
-    float3 brightness = raw/12.0; // Reinhard tone mapping
+    float3 raw = GatherPhotonsGaussian((int2)tex_coord, GatheringRadius);       // TODO:Change this line to change method
+    float3 brightness = raw/20.0; // Extra normalisation
 
     // Update texture with light
     Result[id.xy] = float4(brightness, 1);  // Graphics
