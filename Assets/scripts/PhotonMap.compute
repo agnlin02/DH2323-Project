@@ -20,7 +20,6 @@ struct Photon
 {
     int strength;
     float3 direction;
-    float2 px, py;
 };
 
 
@@ -131,7 +130,7 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
 } */
 
 
-float3 GatherPhotonsDir(float2 centerPixel, float radiusPixels)
+float3 GatherPhotonsDir(float2 centerPixel, int radiusPixels)
 {
     float3 total = float3(0,0,0);
     if (radiusPixels == 0) 
@@ -166,7 +165,7 @@ float3 GatherPhotonsDir(float2 centerPixel, float radiusPixels)
     return total / area;
 }
 
-float3 GatherPhotonsGaussian(float2 centerPixel, float radiusPixels)
+float3 GatherPhotonsGaussian(float2 centerPixel, int radiusPixels)
 {
     float alpha = 0.918;
     float beta = 1.953;
@@ -175,8 +174,10 @@ float3 GatherPhotonsGaussian(float2 centerPixel, float radiusPixels)
     float3 total = float3(0,0,0);
     if (radiusPixels == 0) 
     {
+        float term = (1 - e) / (1- pow(e,-beta));
+        float weight = alpha * (1 - term);
         int index = centerPixel.y * TextureWidth + centerPixel.x;
-        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction;
+        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction * weight;
     }
     
     // Get all pixels within a square
@@ -280,10 +281,7 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     ray.origin = LightPosition;
     ray.dir = normalize(float3((u - 0.5), -1, (v - 0.5)));  // Create cone of light
 
-    bool hit_water = CheckWaterHit(ray);
-    while (hit_water) {
-        hit_water = CheckWaterHit(ray);
-    }
+    CheckWaterHit(ray);
 
     // TODO: Monte Carlo for each hit, probabilities depend on material??
 
@@ -310,8 +308,6 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     uint index = tex_coord.y * TextureWidth + tex_coord.x;
     Photons[index].strength += 1;
     Photons[index].direction = abs(dot(ray.dir, hit_tri.normal));
-    Photons[index].px = id.x;
-    Photons[index].py = id.y;
 
     // Update texture with light
     PhotonCount[tex_coord] += 1;
@@ -367,7 +363,7 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
 
     // Gather photons
     uint numPhotons = PhotonCount[tex_coord];
-    //float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
+    //float3 raw = GatherPhotonsDir((int2)tex_coord, GatheringRadius);       // TODO:Change this line to change method
     float3 raw = GatherPhotonsGaussian((int2)tex_coord, GatheringRadius);       // TODO:Change this line to change method
     float3 brightness = raw/20.0; // Extra normalisation
 

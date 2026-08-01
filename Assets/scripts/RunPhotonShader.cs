@@ -16,10 +16,6 @@ public class RunPhotonShader : MonoBehaviour
     public float eta2 = 1.333f;             // Water index of refraction
     public int gatheringRadius = 5;
 
-    //Number of photons shooting from lightsource
-    public int numPhotons = 100;
-
-
     private RenderTexture photonCount;
     private RenderTexture screenRender;
     private RenderTexture texRender;
@@ -42,7 +38,6 @@ public class RunPhotonShader : MonoBehaviour
     {
         public int strength;
         public Vector3 direction;
-        public Vector2 position;
     }
 
     static int texWidth = 512*2;
@@ -253,7 +248,7 @@ public class RunPhotonShader : MonoBehaviour
 
         computeShader.Dispatch(kernel2, texWidth / 8, texHeight / 8, 1);
 
-        DebugReadPixel(screenRender, 256, 256);
+        DebugReadPixel(screenRender, texWidth/2, texHeight/2);
         //print("Screen rays cast");
     }
 
