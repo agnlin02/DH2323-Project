@@ -690,7 +690,8 @@ MonoBehaviour:
   - {fileID: 1084118210}
   eta1: 1.0003
   eta2: 1.333
-  gatheringRadius: 1
+  gatheringRadius: 3
+  numPhotons: 100
 --- !u!4 &1468568814
 Transform:
   m_ObjectHideFlags: 0

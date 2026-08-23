@@ -16,14 +16,21 @@ struct Triangle
     float2 uv0, uv1, uv2;
 };
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
+struct Photon
+{
+    int strength;
+    float3 direction;
+};
+
+
 RWTexture2D<int> PhotonCount;
 RWTexture2D<float4> Result;
 RWTexture2D<float4> Result2;
+RWStructuredBuffer<Photon> Photons;
 
 StructuredBuffer<Triangle> GroundTriangles;
 StructuredBuffer<Triangle> WaterTriangles;
+
 
 int GroundTriangleCount;
 int WaterTriangleCount;
@@ -40,6 +47,13 @@ float3 CameraForward;
 float3 CameraUp;
 float3 CameraRight;
 float CameraFOV;
+
+int photonsSize;
+
+
+//Photon[,] photonMatrix;
+
+
 
 
 // Returns hit point on ray (t) and hit point on triangle in barycentric coordinates (u, v, (1-u-v))
@@ -77,7 +91,6 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     // The ray line intersects with the triangle.
     // We compute t to find where on the ray the intersection is.
     float t = inv_det * dot(edge2, s_cross_e1);
-
     if (t > epsilon)
     {
         time = t;
@@ -88,9 +101,9 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     return false;
 }
 
-float GatherPhotons(float2 centerPixel, float radiusPixels)
+/* float GatherPhotons(float2 centerPixel, float radiusPixels)
 {
-    float total = 0;
+    float3 total = float3(0,0,0);
     if (radiusPixels == 0) {return PhotonCount[centerPixel];}
     
     // Get all pixels within a square
@@ -114,8 +127,89 @@ float GatherPhotons(float2 centerPixel, float radiusPixels)
     
     float area = 3.14159 * radiusPixels * radiusPixels;
     return total / area;
+} */
+
+
+float3 GatherPhotonsDir(float2 centerPixel, int radiusPixels)
+{
+    float3 total = float3(0,0,0);
+    if (radiusPixels == 0) 
+    {
+        int index = centerPixel.y * TextureWidth + centerPixel.x;
+        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction;
+    }
+    
+    // Get all pixels within a square
+    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
+    {
+        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
+        {
+            // Check if in circle
+            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
+            {
+                int2 coord = 
+                clamp(
+                    centerPixel + int2(dx, dy), 
+                    int2(0,0), 
+                    int2(TextureWidth-1, TextureHeight-1)
+                );
+                int index = coord.y * TextureWidth + coord.x;
+                float3 phi = Photons[index].strength * float3(1, 1, 1);
+                float cos_theta = Photons[index].direction;
+                total += phi * cos_theta;
+            }
+        }
+    }
+    
+    float area = 3.14159 * radiusPixels * radiusPixels;
+    return total / area;
 }
 
+float3 GatherPhotonsGaussian(float2 centerPixel, int radiusPixels)
+{
+    float alpha = 0.918;
+    float beta = 1.953;
+    float e =  2.718281828459045235360287471;
+
+    float3 total = float3(0,0,0);
+    if (radiusPixels == 0) 
+    {
+        float term = (1 - e) / (1- pow(e,-beta));
+        float weight = alpha * (1 - term);
+        int index = centerPixel.y * TextureWidth + centerPixel.x;
+        return (Photons[index].strength * float3(1, 1, 1)) * Photons[index].direction * weight;
+    }
+    
+    // Get all pixels within a square
+    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
+    {
+        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
+        {
+            // Check if in circle
+            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
+            {
+                int2 coord = 
+                clamp(
+                    centerPixel + int2(dx, dy), 
+                    int2(0,0), 
+                    int2(TextureWidth-1, TextureHeight-1)
+                );
+                int index = coord.y * TextureWidth + coord.x;
+
+                float distSqared = pow(centerPixel.x - coord.x, 2) + pow(centerPixel.y - coord.y, 2);
+                float term = (1 - pow(e, (-beta * distSqared/(2*pow(radiusPixels,2))))) / (1- pow(e,-beta));
+                float weight = alpha * (1 - term);
+
+                float3 phi = Photons[index].strength * float3(1, 1, 1);
+                float cos_theta = Photons[index].direction;
+                total += phi * cos_theta * weight;
+            }
+        }
+    }
+    
+    float area = 3.14159 * radiusPixels * radiusPixels;
+    return total / area;
+}
 
 bool CheckWaterHit(inout Ray ray)
 {
@@ -187,12 +281,9 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     ray.origin = LightPosition;
     ray.dir = normalize(float3((u - 0.5), -1, (v - 0.5)));  // Create cone of light
 
-    bool hit_water = CheckWaterHit(ray);
-    while (hit_water) {
-        hit_water = CheckWaterHit(ray);
-    }
+    CheckWaterHit(ray);
 
-    // TODO: Monte Carlo for each hit, probabilities depend on material
+    // TODO: Monte Carlo for each hit, probabilities depend on material??
 
     int hit_index = -1;
     float hit_u = 0, hit_v = 0;
@@ -213,6 +304,10 @@ void PhotonRay (uint3 id : SV_DispatchThreadID)
     tex_coord.x = clamp(tex_coord.x, 0, TextureWidth-1);
     tex_coord.y = clamp(tex_coord.y, 0, TextureHeight-1);
 
+
+    uint index = tex_coord.y * TextureWidth + tex_coord.x;
+    Photons[index].strength += 1;
+    Photons[index].direction = abs(dot(ray.dir, hit_tri.normal));
 
     // Update texture with light
     PhotonCount[tex_coord] += 1;
@@ -268,11 +363,14 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
 
     // Gather photons
     uint numPhotons = PhotonCount[tex_coord];
-    float raw = GatherPhotons((int2)tex_coord, GatheringRadius);
-    float brightness = raw/12.0; // Reinhard tone mapping
+    //float3 raw = GatherPhotonsDir((int2)tex_coord, GatheringRadius);       // TODO:Change this line to change method
+    float3 raw = GatherPhotonsGaussian((int2)tex_coord, GatheringRadius);       // TODO:Change this line to change method
+    float3 brightness = raw/20.0; // Extra normalisation
 
     // Update texture with light
-    Result[id.xy] = float4(brightness, brightness, brightness, 1);  // Graphics
-    Result2[tex_coord] = float4(brightness, brightness, brightness, 1);     // Texture painting
+    Result[id.xy] = float4(brightness, 1);  // Graphics
+    Result2[tex_coord] = float4(brightness, 1);     // Texture painting
 }
+
+
 
