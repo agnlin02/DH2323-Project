@@ -24,7 +24,9 @@ public class RunPhotonShader : MonoBehaviour
     private ComputeBuffer waterTriangleBuffer;
     private ComputeBuffer photonBuffer;
 
-
+    /*
+        Struct for storing a triangle object
+    */
     [StructLayout(LayoutKind.Sequential)]
     struct Triangle
     {
@@ -33,6 +35,9 @@ public class RunPhotonShader : MonoBehaviour
         public Vector2 uv0, uv1, uv2;
     }
 
+    /*
+        Struct for storing a photon object
+    */
     [StructLayout(LayoutKind.Sequential)]
     struct Photon
     {
@@ -40,8 +45,8 @@ public class RunPhotonShader : MonoBehaviour
         public Vector3 direction;
     }
 
-    static int texWidth = 512*2;
-    static int texHeight = 512*2;
+    static int texWidth = 512;
+    static int texHeight = 512;
 
     static int photonSize = texWidth * texHeight;
 
@@ -90,7 +95,7 @@ public class RunPhotonShader : MonoBehaviour
 
     void ConvertForDisplay()
     {
-        RenderTexture.active = screenRender; // swap to photonCount
+        RenderTexture.active = screenRender;
         displayTex = new Texture2D(texWidth, texHeight, TextureFormat.RGBAFloat, false); // match photonCount format
         displayTex.ReadPixels(new Rect(0, 0, texWidth, texHeight), 0, 0);
         displayTex.Apply();
@@ -102,7 +107,6 @@ public class RunPhotonShader : MonoBehaviour
         foreach (var obj in groundObjects)
         {
             Renderer rend = obj.GetComponent<Renderer>();
-            //Graphics.Blit(Texture2D.whiteTexture, photonCount);
 
             Material m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             m.SetTexture("_BaseMap", texRender);
@@ -115,8 +119,7 @@ public class RunPhotonShader : MonoBehaviour
     {
         groundTriangleBuffer = BuildBuffer(groundObjects);
         waterTriangleBuffer = BuildBuffer(waterObjects);
-        //photonBuffer = BuildBufferPhoton();
-        photonBuffer = BuildBufferArray();
+        photonBuffer = BuildPhotonBufferArray();
     }
 
     // Add all triangles to the buffer
@@ -144,8 +147,6 @@ public class RunPhotonShader : MonoBehaviour
                 tri.uv1 = uvs[indices[i+1]];
                 tri.uv2 = uvs[indices[i+2]];
 
-                //Debug.Log(tri.uv0 + ", "+ tri.uv1+", "+tri.uv2);
-
                 tri.normal = Vector3.Cross(tri.v1 - tri.v0, tri.v2 - tri.v0).normalized;
                 triangles.Add(tri);
             }
@@ -154,32 +155,20 @@ public class RunPhotonShader : MonoBehaviour
         ComputeBuffer buffer = new ComputeBuffer(triangles.Count, Marshal.SizeOf(typeof(Triangle)));
         buffer.SetData(triangles.ToArray());
 
-/*         for (int i = 0; i < Mathf.Min(3, triangles.Count); i++)
-        {
-            Debug.Log($"Trangle {i} notmal {triangles[i].normal}");
-        } */
         return buffer;
     }
 
-    /* ComputeBuffer BuildBufferPhoton()
-    {
-        Photon[] photons = new Photon[numPhotons];
-
-        photons[0].position = new Vector3(1, 2, 3);
-        photons[0].strength = 10;
-
-        ComputeBuffer buffer = new ComputeBuffer(photons.Length, Marshal.SizeOf(typeof(Photon)));
-        buffer.SetData(photons);
-        return buffer;
-    } */
-
-    ComputeBuffer BuildBufferArray()
+    ComputeBuffer BuildPhotonBufferArray()
     {
         ComputeBuffer buffer = new ComputeBuffer(photonSize, Marshal.SizeOf(typeof(Photon)));
         buffer.SetData(photons);
         return buffer;
     }    
 
+    /*
+        Do one pass of casting rays from the light source to the scene to get photon
+        hit placements
+    */
     void CastLightRays()
     {
         int kernel = computeShader.FindKernel("PhotonRay");
@@ -199,32 +188,14 @@ public class RunPhotonShader : MonoBehaviour
         computeShader.SetFloat("eta1", eta1);
         computeShader.SetFloat("eta2", eta2);
 
-        //computeShader.SetBuffer(kernel, "photonMatrix", photonMatrix);
-
-
         computeShader.Dispatch(kernel, texWidth / 8, texHeight / 8, 1);
-
-        //print("Rays cast");
-
     }
 
-    void DebugReadPixel(RenderTexture rt, int x, int y)
-    {
-        RenderTexture.active = rt;
-        Texture2D debug = new Texture2D(rt.width, rt.height, TextureFormat.RGBAFloat, false);
-        debug.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-        debug.Apply();
-        RenderTexture.active = null;
-        
-        Color pixel = debug.GetPixel(x, y);
-        print($"Pixel at ({x},{y}): r={pixel.r} g={pixel.g} b={pixel.b} a={pixel.a}");
-    }
-
+    /*
+        Do one pass of casting rays from the camera to the scene to get visibility
+    */
     void CastCameraRays()
     {
-        // TODO: Second pass for displaying light, first pass only for counting (might add more secondary passes)
-        
-
         int kernel2 = computeShader.FindKernel("ScreenRay");
         computeShader.SetTexture(kernel2, "PhotonCount", photonCount);
         computeShader.SetBuffer(kernel2, "GroundTriangles", groundTriangleBuffer);
@@ -247,17 +218,20 @@ public class RunPhotonShader : MonoBehaviour
 
 
         computeShader.Dispatch(kernel2, texWidth / 8, texHeight / 8, 1);
-
-        DebugReadPixel(screenRender, texWidth/2, texHeight/2);
-        //print("Screen rays cast");
     }
 
+    /*
+        Draw the result of the screen rays texture on the GUI in Unity
+    */
     void OnGUI()
     {
     if (displayTex != null)
         GUI.DrawTexture(new Rect(0, 0, texWidth, texHeight), displayTex);
     }
 
+    /*
+        Free memory
+    */
     void OnDestroy()
     {
         waterTriangleBuffer?.Release();

@@ -51,11 +51,6 @@ float CameraFOV;
 int photonsSize;
 
 
-//Photon[,] photonMatrix;
-
-
-
-
 // Returns hit point on ray (t) and hit point on triangle in barycentric coordinates (u, v, (1-u-v))
 // taken from https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_out, out float v_out)
@@ -100,34 +95,6 @@ bool ray_intersects_triangle(Ray ray, Triangle tri, out float time, out float u_
     }
     return false;
 }
-
-/* float GatherPhotons(float2 centerPixel, float radiusPixels)
-{
-    float3 total = float3(0,0,0);
-    if (radiusPixels == 0) {return PhotonCount[centerPixel];}
-    
-    // Get all pixels within a square
-    for (int dx = -radiusPixels; dx <= radiusPixels; dx++)
-    {
-        for (int dy = -radiusPixels; dy <= radiusPixels; dy++)
-        {
-            // Check if in circle
-            if (dx*dx + dy*dy <= radiusPixels*radiusPixels)
-            {
-                int2 coord = 
-                clamp(
-                    centerPixel + int2(dx, dy), 
-                    int2(0,0), 
-                    int2(TextureWidth-1, TextureHeight-1)
-                );
-                total += PhotonCount[coord];
-            }
-        }
-    }
-    
-    float area = 3.14159 * radiusPixels * radiusPixels;
-    return total / area;
-} */
 
 
 float3 GatherPhotonsDir(float2 centerPixel, int radiusPixels)
@@ -368,7 +335,7 @@ void ScreenRay (uint3 id : SV_DispatchThreadID)
     float3 brightness = raw/20.0; // Extra normalisation
 
     // Update texture with light
-    Result[id.xy] = float4(brightness, 1);  // Graphics
+    Result[id.xy] = float4(brightness, 1);  // GUI graphics
     Result2[tex_coord] = float4(brightness, 1);     // Texture painting
 }
 

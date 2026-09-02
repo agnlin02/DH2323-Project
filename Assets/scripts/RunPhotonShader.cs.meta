@@ -1,2 +1,14 @@
 fileFormatVersion: 2
 guid: 5a33e67f0fc569e458091de85840771e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - computeShader: {fileID: 7200000, guid: 0960780a48815bb4b9859736c28250d4, type: 3}
+  - lightSource: {instanceID: 0}
+  - camera: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
